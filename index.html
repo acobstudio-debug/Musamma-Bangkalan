@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#063b32">
+<title>Twibbon MUSAMMA 2026 | Wilayah U-1 Bangkalan</title>
+<style>
+:root{--green:#073d33;--gold:#e9bd54;--cream:#fff8e8}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(circle at top,#145b4c,#031e1a 72%);color:var(--cream);min-height:100vh}
+main{width:min(100% - 28px,980px);margin:0 auto;padding:28px 0 42px}
+header{text-align:center;margin-bottom:22px}
+header h1{font-size:clamp(25px,5vw,42px);margin:0;color:#f3d47c;letter-spacing:.04em}
+header p{margin:8px 0 0;color:#e4e0d2}
+.layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:24px;align-items:start}
+.panel{background:#082b26;border:1px solid #987333;border-radius:20px;padding:16px;box-shadow:0 16px 40px #0006}
+.preview-wrap{width:100%;aspect-ratio:1;background:#13231f;border-radius:12px;overflow:hidden;display:grid;place-items:center}
+canvas{display:block;width:100%;height:100%;object-fit:contain;touch-action:none}
+.controls{display:flex;flex-direction:column;gap:15px}
+label{font-weight:650;display:block;margin-bottom:7px}
+input[type=file]{width:100%;padding:12px;background:#102f29;border:1px dashed #c9a34c;border-radius:12px;color:#fff}
+input[type=range]{width:100%;accent-color:#e9bd54}
+button{border:0;border-radius:12px;padding:14px 16px;font-weight:750;font-size:16px;cursor:pointer}
+.primary{background:linear-gradient(135deg,#f6d77e,#c38a25);color:#1d241b}
+.secondary{background:#174b40;color:#fff;border:1px solid #987333}
+button:disabled{opacity:.45;cursor:not-allowed}
+.hint{font-size:13px;color:#d0d8d1;line-height:1.55;margin:0}
+.note{font-size:12px;color:#c4c9c1;text-align:center;margin-top:14px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}main{padding-top:20px}.panel{padding:12px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>TWIBBON MUSAMMA 2026</h1>
+  <p>Siap Hadir Acara MUSAMMA · Wilayah U-1 Bangkalan</p>
+</header>
+<section class="layout">
+  <div class="panel">
+    <div class="preview-wrap"><canvas id="preview" width="1254" height="1254" aria-label="Pratinjau twibbon"></canvas></div>
+    <p class="note">Geser foto pada pratinjau untuk mengatur posisinya.</p>
+  </div>
+  <div class="panel controls">
+    <div>
+      <label for="photo">1. Pilih foto kamu</label>
+      <input id="photo" type="file" accept="image/*">
+    </div>
+    <div>
+      <label for="zoom">2. Atur ukuran foto</label>
+      <input id="zoom" type="range" min="1" max="3" step="0.01" value="1">
+    </div>
+    <button class="primary" id="download" disabled>Unduh Twibbon PNG</button>
+    <button class="secondary" id="reset" type="button">Atur ulang posisi foto</button>
+    <p class="hint">Tips: gunakan foto potret dengan wajah terlihat jelas. Kamu bisa menggeser foto langsung pada pratinjau dan memperbesar atau memperkecilnya dengan penggeser ukuran.</p>
+    <p class="hint">Gratis, tanpa watermark, dan foto diproses langsung di perangkatmu—tidak diunggah ke server.</p>
+  </div>
+</section>
+</main>
+<script>
+const canvas=document.getElementById('preview');
+const ctx=canvas.getContext('2d');
+const photoInput=document.getElementById('photo');
+const zoomInput=document.getElementById('zoom');
+const downloadBtn=document.getElementById('download');
+const resetBtn=document.getElementById('reset');
+const W=canvas.width,H=canvas.height;
+const frame=new Image(); frame.src='twibbon.png';
+let photo=null,scale=1,baseScale=1,offsetX=0,offsetY=0,dragging=false,lastX=0,lastY=0;
+function coverScale(){return Math.max(W/photo.width,H/photo.height)}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(photo){
+    const s=baseScale*scale, dw=photo.width*s, dh=photo.height*s;
+    ctx.drawImage(photo,(W-dw)/2+offsetX,(H-dh)/2+offsetY,dw,dh);
+  }
+  if(frame.complete && frame.naturalWidth) ctx.drawImage(frame,0,0,W,H);
+}
+frame.onload=draw;
+photoInput.addEventListener('change',e=>{
+  const file=e.target.files&&e.target.files[0]; if(!file)return;
+  if(!file.type.startsWith('image/'))return;
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{photo=img;baseScale=coverScale();scale=1;offsetX=0;offsetY=0;zoomInput.value='1';downloadBtn.disabled=false;draw();URL.revokeObjectURL(url)};
+  img.src=url;
+});
+zoomInput.addEventListener('input',()=>{scale=Number(zoomInput.value);draw()});
+resetBtn.addEventListener('click',()=>{if(!photo)return;scale=1;offsetX=0;offsetY=0;zoomInput.value='1';draw()});
+function point(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
+canvas.addEventListener('pointerdown',e=>{if(!photo)return;dragging=true;canvas.setPointerCapture(e.pointerId);const p=point(e);lastX=p.x;lastY=p.y});
+canvas.addEventListener('pointermove',e=>{if(!dragging)return;const p=point(e);offsetX+=p.x-lastX;offsetY+=p.y-lastY;lastX=p.x;lastY=p.y;draw()});
+canvas.addEventListener('pointerup',()=>dragging=false);
+canvas.addEventListener('pointercancel',()=>dragging=false);
+downloadBtn.addEventListener('click',()=>{if(!photo)return;draw();canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Twibbon-MUSAMMA-2026.png';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)},'image/png')});
+draw();
+</script>
+</body>
+</html>
